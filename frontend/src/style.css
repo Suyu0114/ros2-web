@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light dark;
+  --panel-bg: rgb(255 255 255 / 0.92);
+  --text: #1d2733;
+  --muted: #5b6b7d;
+  --border: #c5ced8;
+  --accent: #1f6fb2;
+  --ok: #2a8c55;
+  --warn: #b97800;
+  --bad: #c0392b;
+  font-family: system-ui, 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --panel-bg: rgb(22 28 36 / 0.92);
+    --text: #e6edf3;
+    --muted: #9aa8b6;
+    --border: #3d4a58;
+  }
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #aad3df; /* 與 OSM 海面同色，圖磚載入前不會一片白 */
+}
