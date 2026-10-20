@@ -1,0 +1,6 @@
+gnss_publisher:
+  ros__parameters:
+    csv_path: /data/path_data.csv  # 容器內路徑；docker-compose 可用 volume 換成別的檔案
+    publish_rate_hz: 5.0
+    frame_id: gps
+    loop: true
