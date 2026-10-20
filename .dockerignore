@@ -1,0 +1,14 @@
+# 只有 publisher 以 repo 根目錄為 build context；其餘服務用自己的目錄
+.git
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/build
+**/install
+**/log
+frontend
+backend
+docs

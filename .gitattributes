@@ -1,0 +1,5 @@
+# 一律以 LF 存放，避免 Windows 的 CRLF 讓容器內的 shell script / entrypoint 失效
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
