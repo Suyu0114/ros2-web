@@ -1,0 +1,4 @@
+# 直接依賴；鎖定版本與雜湊在 requirements.txt（由 uv 產生，見 README）
+fastapi
+uvicorn[standard]
+pydantic-settings
