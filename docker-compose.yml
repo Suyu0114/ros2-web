@@ -1,0 +1,52 @@
+# 一鍵啟動：docker-compose up（或 docker compose up），開啟 http://localhost:8080
+
+# ROS 2 節點共用的 DDS 設定
+x-ros-env: &ros-env
+  ROS_DOMAIN_ID: "42"
+  RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+  # 只用 UDP。容器之間不共用 /dev/shm，若啟用 Fast DDS 的 SHM transport，
+  # 可能 discovery 成功卻收不到資料
+  FASTDDS_BUILTIN_TRANSPORTS: UDPv4
+
+services:
+  publisher:
+    build:
+      context: .
+      dockerfile: publisher/Dockerfile
+      target: runtime
+    environment: *ros-env
+    # 換路徑檔：取消下一行註解，指向自己的 CSV
+    # volumes: ["./data/path_data.csv:/data/path_data.csv:ro"]
+    networks: [ros_net]
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: backend
+      target: runtime
+    environment:
+      <<: *ros-env
+      BRIDGE_GPS_TOPIC: /gps/fix
+    networks: [ros_net]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: frontend
+    environment:
+      BACKEND_HOST: backend
+      BACKEND_PORT: "8000"
+      # 隔離網路：改成離線圖資伺服器，例如 http://tiles.local/{z}/{x}/{y}.png
+      TILE_URL: ""
+      TILE_ATTRIBUTION: ""
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [ros_net]
+    restart: unless-stopped
+
+networks:
+  ros_net:
+    driver: bridge
