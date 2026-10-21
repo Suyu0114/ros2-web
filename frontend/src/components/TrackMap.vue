@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 const follow = defineModel<boolean>('follow', { required: true })
 
-const DEFAULT_CENTER: L.LatLngTuple = [22.6166, 120.279] // 高雄港
+const DEFAULT_CENTER: L.LatLngTuple = [24.5915, 121.8725] // 蘇澳港中央港池
 const container = useTemplateRef<HTMLDivElement>('container')
 
 // Leaflet 物件不放進 Vue 的 reactivity，避免被包成 Proxy 拖慢效能

@@ -7,7 +7,7 @@
 檢查項目：
 1. /api/healthz 回應，且在 --wait 秒內開始收到 fix
 2. WebSocket 第一則是非空的 snapshot
-3. 之後的 fix 頻率約 5Hz、seq 遞增、座標在高雄港附近
+3. 之後的 fix 頻率約 5Hz、seq 遞增、座標在蘇澳港附近
 
 需要 websockets 套件（backend 的依賴已包含；或 pip install websockets）。
 """
@@ -24,8 +24,8 @@ import urllib.request
 
 import websockets
 
-LAT_RANGE = (22.5, 22.7)
-LON_RANGE = (120.2, 120.35)
+LAT_RANGE = (24.55, 24.62)  # 蘇澳港與東南外海
+LON_RANGE = (121.85, 121.94)
 
 
 def wait_until_fixes_flow(base: str, timeout_s: float) -> dict:
@@ -91,7 +91,7 @@ def main() -> int:
         if not (LAT_RANGE[0] < f["lat"] < LAT_RANGE[1] and LON_RANGE[0] < f["lon"] < LON_RANGE[1])
     ]
     if outside:
-        failures.append(f"{len(outside)} fixes outside the Kaohsiung harbor area, e.g. {outside[0]}")
+        failures.append(f"{len(outside)} fixes outside the Su'ao harbor area, e.g. {outside[0]}")
 
     print(f"ok   snapshot: {len(snapshot)} points")
     verdict = "ok  " if 4.0 <= rate <= 6.0 else "FAIL"
