@@ -2,7 +2,9 @@
 
 ROS 2 節點以 5Hz 播放 GNSS 路徑（`sensor_msgs/msg/NavSatFix` → `/gps/fix`），FastAPI 橋接器把訊息轉成 JSON，透過 WebSocket 推送；Vue 3 網頁在 OpenStreetMap 上即時標出載具位置，並畫出走過的航跡。三個服務各自容器化，`docker-compose up` 一鍵啟動。
 
-> 選做題（Option RAG）：[GCS 語音指令控制系統設計文件](docs/voice-command-design.md)
+> 選做題：
+> - Option RAG：[GCS 語音指令控制系統設計文件](docs/voice-command-design.md)
+> - Option DevOps：[艦隊軟體 CI/CD 設計文件](docs/devops-cicd-design.md)
 
 ![GCS 畫面：USV 從蘇澳港中央港池駛向港口開口](docs/images/gcs-desktop.png)
 
