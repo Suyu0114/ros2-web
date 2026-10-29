@@ -230,7 +230,7 @@ flowchart TB
 | 執行身分 | backend 以 uid 10001 執行；publisher 與 nginx 的 master 程序仍是 root | 全部非 root、根目錄唯讀、移除多餘的 capabilities |
 | base image | 鎖到 minor tag，例如 `nginx:1.30-alpine`、`ros:jazzy-ros-core` | 鎖 digest；mirror 更新 base image 時，重跑整條管線 |
 | apt 套件 | `rosdep install` 時取得當下的最新版 | 從日期快照（snapshot）取得，結果固定 |
-| 測試 | 每個 Dockerfile 都有 `test` stage：gtest 6 項、pytest 17 項、vitest 20 項；e2e 冒煙測試檢查 5Hz、seq 遞增、座標範圍 | 擴充成 SIL、HIL、soak、升級與回退測試 |
+| 測試 | 每個 Dockerfile 都有 `test` stage：gtest 6 項、pytest 20 項、vitest 21 項；e2e 冒煙測試檢查 5Hz、seq 遞增、座標範圍、跨站 Origin 被拒 | 擴充成 SIL、HIL、soak、升級與回退測試 |
 | 成品 | 沒有；CI 只建置、不發布 | 簽章的 OCI image＋SBOM＋provenance，組成發行包 |
 | 部署後檢查 | `tools/smoke_test.py` 在 CI 裡跑 | 同樣的檢查放進艦上的自我測試（§5.4） |
 
