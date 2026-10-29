@@ -1,10 +1,14 @@
 :root {
   color-scheme: light dark;
-  --panel-bg: rgb(255 255 255 / 0.92);
-  --text: #1d2733;
-  --muted: #5b6b7d;
-  --border: #c5ced8;
-  --accent: #1f6fb2;
+  /* 銀色海軍：淺色是銀色金屬底＋海軍藍，深色反過來 */
+  --panel-bg: linear-gradient(160deg, rgb(246 248 250 / 0.94), rgb(208 215 222 / 0.94));
+  --panel-edge: #aab4bf;
+  --panel-highlight: rgb(255 255 255 / 0.7);
+  --text: #102a4c;
+  --muted: #53637a;
+  --border: rgb(16 42 76 / 0.18);
+  --accent: #1d4e89;
+  --accent-tint: rgb(29 78 137 / 0.1);
   --ok: #2a8c55;
   --warn: #b97800;
   --bad: #c0392b;
@@ -13,10 +17,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --panel-bg: rgb(22 28 36 / 0.92);
-    --text: #e6edf3;
-    --muted: #9aa8b6;
-    --border: #3d4a58;
+    --panel-bg: linear-gradient(160deg, rgb(22 40 66 / 0.94), rgb(10 22 40 / 0.94));
+    --panel-edge: #34496a;
+    --panel-highlight: rgb(200 212 226 / 0.12);
+    --text: #dde3ea;
+    --muted: #94a3b5;
+    --border: rgb(200 212 226 / 0.18);
+    --accent: #cdd6df;
+    --accent-tint: rgb(205 214 223 / 0.12);
   }
 }
 

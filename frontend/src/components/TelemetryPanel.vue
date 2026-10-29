@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 
 import { formatDms, type Motion } from '../lib/geo'
 import type { ConnectionStatus, GpsFix } from '../types'
+import BorderDrawButton from './BorderDrawButton.vue'
 
 const props = defineProps<{
   status: ConnectionStatus
@@ -83,11 +84,11 @@ const gpsTime = computed(() => (props.latest ? new Date(props.latest.t).toISOStr
     </dl>
 
     <div class="actions">
-      <button type="button" :aria-pressed="follow" :class="{ active: follow }" @click="follow = !follow">
+      <BorderDrawButton :aria-pressed="follow" :class="{ active: follow }" @click="follow = !follow">
         跟隨
-      </button>
-      <button type="button" :disabled="points === 0" @click="emit('fit')">全覽</button>
-      <button type="button" :disabled="points === 0" @click="emit('clear')">清除軌跡</button>
+      </BorderDrawButton>
+      <BorderDrawButton :disabled="points === 0" @click="emit('fit')">全覽</BorderDrawButton>
+      <BorderDrawButton :disabled="points === 0" @click="emit('clear')">清除軌跡</BorderDrawButton>
     </div>
   </section>
 </template>
@@ -96,8 +97,11 @@ const gpsTime = computed(() => (props.latest ? new Date(props.latest.t).toISOStr
 .panel {
   background: var(--panel-bg);
   color: var(--text);
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 var(--panel-highlight),
+    0 4px 16px rgb(0 0 0 / 0.2);
   padding: 12px 14px;
   backdrop-filter: blur(4px);
 }
@@ -108,10 +112,13 @@ header {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 h1 {
   font-size: 1rem;
+  letter-spacing: 0.06em;
   margin: 0;
 }
 
@@ -163,24 +170,7 @@ dd small {
   margin-top: 10px;
 }
 
-button {
+.actions button {
   flex: 1;
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 6px 0;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-button.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 </style>
