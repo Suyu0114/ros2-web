@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     history_size: int = 3000  # 保留的歷史點數；5Hz 下約 10 分鐘
     client_queue_size: int = 100  # 每個 WebSocket client 的待送佇列上限
     stale_after_s: float = 2.0  # 超過這麼久沒收到 fix，healthz 回報 degraded
+    # WebSocket 除了同源之外，額外允許的 Origin，逗號分隔（例如 https://gcs.example,http://10.0.0.5:8080）
+    allowed_origins: str = ""
 
 
 @lru_cache

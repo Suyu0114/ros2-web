@@ -47,7 +47,9 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
-        proxy_set_header Host $host;
+        # 必須是 $http_host（含 port）：backend 拿 Host 與 Origin 比對是否同源，
+        # $host 不含 port，所有瀏覽器的連線都會被擋
+        proxy_set_header Host $http_host;
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }

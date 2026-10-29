@@ -1,9 +1,11 @@
 import time
 
 import pytest
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.settings import get_settings
 from tests.helpers import make_fix
 
 
@@ -47,6 +49,33 @@ def test_websocket_sends_snapshot_then_live_fixes(client):
         assert message["type"] == "fix"
         assert message["data"]["seq"] == 3
         assert set(message["data"]) == {"seq", "t", "lat", "lon", "alt", "status", "frame_id"}
+
+
+def test_websocket_rejects_cross_site_origin(client):
+    with pytest.raises(WebSocketDisconnect) as excinfo:
+        with client.websocket_connect("/ws/gps", headers={"origin": "https://evil.example"}):
+            pass
+    assert excinfo.value.code == 1008
+    assert client.get("/api/healthz").json()["clients"] == 0
+
+
+def test_websocket_accepts_same_origin_and_non_browser_clients(client):
+    # TestClient 的 Host 是 testserver；沒有 Origin 的是非瀏覽器 client
+    for headers in ({"origin": "http://testserver"}, {"origin": "HTTP://TestServer"}, {}):
+        with client.websocket_connect("/ws/gps", headers=headers) as ws:
+            assert ws.receive_json()["type"] == "snapshot"
+
+
+def test_websocket_accepts_extra_allowed_origins(no_ros, monkeypatch):
+    monkeypatch.setenv("BRIDGE_ALLOWED_ORIGINS", "https://gcs.example, http://10.0.0.5:8080")
+    get_settings.cache_clear()
+    with TestClient(app) as client:
+        for origin in ("https://gcs.example", "http://10.0.0.5:8080", "http://testserver"):
+            with client.websocket_connect("/ws/gps", headers={"origin": origin}) as ws:
+                assert ws.receive_json()["type"] == "snapshot"
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws/gps", headers={"origin": "http://10.0.0.5:9999"}):
+                pass
 
 
 def test_websocket_unsubscribes_on_disconnect(client):

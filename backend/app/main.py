@@ -1,9 +1,10 @@
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Annotated
+from urllib.parse import urlsplit
 
 import anyio
-from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect, status
 
 from app.hub import TelemetryHub
 from app.schemas import FixMessage, GpsFix, Health, SnapshotMessage
@@ -62,9 +63,30 @@ def track(
     return request.app.state.hub.history(limit)
 
 
+def origin_allowed(websocket: WebSocket) -> bool:
+    """防跨站 WebSocket 劫持（CSWSH）。
+
+    瀏覽器的 WebSocket 不受同源政策限制：GCS 主機上開的任何網頁都能連進來讀船位，
+    所以要自己檢查 Origin。同源（Origin 與 Host 相同）或列在 BRIDGE_ALLOWED_ORIGINS 才放行。
+    瀏覽器一定會帶 Origin；沒有 Origin 的是非瀏覽器 client（smoke test、CLI 工具），放行。
+    """
+    origin = websocket.headers.get("origin")
+    if origin is None:
+        return True
+    origin = origin.lower()
+    if urlsplit(origin).netloc == websocket.headers.get("host", "").lower():
+        return True
+    extra = get_settings().allowed_origins.lower().split(",")
+    return origin in {o.strip() for o in extra if o.strip()}
+
+
 @app.websocket("/ws/gps")
 async def ws_gps(websocket: WebSocket) -> None:
     """先送 snapshot（歷史軌跡），之後每筆 fix 即時推送。"""
+    if not origin_allowed(websocket):
+        # accept 之前 close，client 收到的是 HTTP 403
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await websocket.accept()
     hub: TelemetryHub = websocket.app.state.hub
     with hub.subscribe() as (snapshot, queue):

@@ -8,6 +8,7 @@
 1. /api/healthz 回應，且在 --wait 秒內開始收到 fix
 2. WebSocket 第一則是非空的 snapshot
 3. 之後的 fix 頻率約 5Hz、seq 遞增、座標在蘇澳港附近
+4. 跨站 Origin 的 WebSocket 會被拒絕（403）；同源的可以連（第 2、3 項就是帶同源 Origin 連的）
 
 需要 websockets 套件（backend 的依賴已包含；或 pip install websockets）。
 """
@@ -23,6 +24,7 @@ import time
 import urllib.request
 
 import websockets
+from websockets.exceptions import InvalidStatus
 
 LAT_RANGE = (24.55, 24.62)  # 蘇澳港與東南外海
 LON_RANGE = (121.85, 121.94)
@@ -45,8 +47,9 @@ def wait_until_fixes_flow(base: str, timeout_s: float) -> dict:
     raise SystemExit(f"FAIL healthz: {last_error}")
 
 
-async def collect(ws_url: str, seconds: float) -> tuple[list[dict], list[dict]]:
-    async with websockets.connect(ws_url, open_timeout=5) as ws:
+async def collect(ws_url: str, origin: str, seconds: float) -> tuple[list[dict], list[dict]]:
+    # 帶上與頁面相同的 Origin，模擬瀏覽器（也驗證 nginx 轉給 backend 的 Host 含 port）
+    async with websockets.connect(ws_url, origin=origin, open_timeout=5) as ws:
         first = json.loads(await asyncio.wait_for(ws.recv(), timeout=5))
         if first.get("type") != "snapshot":
             raise SystemExit(f"FAIL first message is not a snapshot: {first.get('type')}")
@@ -63,6 +66,15 @@ async def collect(ws_url: str, seconds: float) -> tuple[list[dict], list[dict]]:
         return first["points"], fixes
 
 
+async def cross_site_status(ws_url: str) -> int | None:
+    """以別的網站的 Origin 連線；回傳被拒絕時的 HTTP 狀態碼，連上了就回傳 None。"""
+    try:
+        async with websockets.connect(ws_url, origin="https://evil.example", open_timeout=5):
+            return None
+    except InvalidStatus as exc:
+        return exc.response.status_code
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default="http://localhost:8080")
@@ -75,9 +87,12 @@ def main() -> int:
     health = wait_until_fixes_flow(base, args.wait)
     print(f"ok   healthz: {health}")
 
-    snapshot, fixes = asyncio.run(collect(ws_url, args.seconds))
+    snapshot, fixes = asyncio.run(collect(ws_url, base, args.seconds))
     rate = len(fixes) / args.seconds
     failures = []
+    cross_site = asyncio.run(cross_site_status(ws_url))
+    if cross_site != 403:
+        failures.append(f"cross-site WebSocket was not rejected with 403 (got {cross_site})")
     if not snapshot:
         failures.append("snapshot is empty")
     if not 4.0 <= rate <= 6.0:
@@ -96,6 +111,8 @@ def main() -> int:
     print(f"ok   snapshot: {len(snapshot)} points")
     verdict = "ok  " if 4.0 <= rate <= 6.0 else "FAIL"
     print(f"{verdict} live: {len(fixes)} fixes in {args.seconds:.0f}s = {rate:.2f} Hz")
+    if cross_site == 403:
+        print("ok   cross-site origin rejected: 403")
     for failure in failures:
         print(f"FAIL {failure}")
     return 1 if failures else 0
