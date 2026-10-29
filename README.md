@@ -61,7 +61,9 @@ git clone https://github.com/Suyu0114/ros2-web.git && cd ros2-web
 docker-compose up --build      # 或 docker compose up --build
 ```
 
-第一次建置需要下載 ROS 2 image，約需數分鐘。完成後開啟 <http://localhost:8080>。
+第一次建置需要下載 ROS 2 image，約需數分鐘。啟動後有三個容器，只有 frontend 對外開 port（8080 → 80），backend 與 publisher 只在 compose 內部網路 `ros_net` 通訊。三個容器的記憶體合計約 150 MiB（`docker stats` 實測：backend 72、publisher 50、frontend 24 MiB）。
+
+開啟 <http://localhost:8080>：
 
 - **畫面上**：船形標記沿蘇澳港航線移動，紅線是走過的航跡。右上角面板顯示經緯度、航速、航向和更新頻率（約 5 Hz）。
 - **跟隨**：地圖自動置中在船上；拖曳地圖就會停止跟隨。
