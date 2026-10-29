@@ -46,7 +46,7 @@ export function estimateMotion(track: readonly (LatLon & { t: number })[], windo
   }
 }
 
-/** 十進位度數轉度分秒，例如 22.6166 → 22°36'59.8"N */
+/** 十進位度數轉度分秒，例如 24.5939 → 24°35'38.0"N */
 export function formatDms(value: number, axis: 'lat' | 'lon'): string {
   const hemisphere = axis === 'lat' ? (value >= 0 ? 'N' : 'S') : value >= 0 ? 'E' : 'W'
   const totalTenths = Math.round(Math.abs(value) * 36000) // 以 0.1 秒為單位，避免進位成 60.0"

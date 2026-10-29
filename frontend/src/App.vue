@@ -9,7 +9,7 @@ import { estimateMotion } from './lib/geo'
 
 defineProps<{ config: AppConfig }>()
 
-const { status, track, latest, lastMessageAt, rateHz, clearTrack } = useGpsStream()
+const { status, track, latest, lastFixAt, stale, rateHz, clearTrack } = useGpsStream()
 const motion = computed(() => estimateMotion(track.value))
 const follow = ref(true)
 const trackMap = useTemplateRef<InstanceType<typeof TrackMap>>('trackMap')
@@ -24,6 +24,7 @@ const trackMap = useTemplateRef<InstanceType<typeof TrackMap>>('trackMap')
       :config="config"
       :track="track"
       :course="motion?.courseDeg ?? null"
+      :stale="stale"
     />
     <TelemetryPanel
       v-model:follow="follow"
@@ -33,7 +34,8 @@ const trackMap = useTemplateRef<InstanceType<typeof TrackMap>>('trackMap')
       :motion="motion"
       :rate-hz="rateHz"
       :points="track.length"
-      :last-message-at="lastMessageAt"
+      :last-fix-at="lastFixAt"
+      :stale="stale"
       @fit="trackMap?.fitTrack()"
       @clear="clearTrack"
     />

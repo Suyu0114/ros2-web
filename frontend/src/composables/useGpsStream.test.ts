@@ -151,8 +151,32 @@ describe('useGpsStream', () => {
     }
     expect(stream.rateHz.value).toBeCloseTo(5, 5)
 
-    vi.advanceTimersByTime(6000)
+    // 最後一筆後 3 秒內維持；過期（stale）就歸零，不等舊的點移出 5 秒視窗
+    vi.advanceTimersByTime(3000)
+    expect(stream.rateHz.value).toBeCloseTo(5, 5)
+    vi.advanceTimersByTime(1000)
     expect(stream.rateHz.value).toBe(0)
+    expect(stream.stale.value).toBe(true)
+  })
+
+  it('marks the position stale until live fixes arrive, when they stop, and while disconnected', () => {
+    const { stream, socket } = setup()
+    socket().serverOpen()
+    socket().serverSend({ type: 'snapshot', session: 'A', points: [fix(1)] })
+    expect(stream.stale.value).toBe(true) // snapshot 只是歷史
+    expect(stream.lastFixAt.value).toBeNull()
+
+    socket().serverSend({ type: 'fix', data: fix(2) })
+    expect(stream.stale.value).toBe(false)
+    vi.advanceTimersByTime(3000)
+    expect(stream.stale.value).toBe(false)
+    vi.advanceTimersByTime(1000)
+    expect(stream.stale.value).toBe(true)
+
+    socket().serverSend({ type: 'fix', data: fix(3) })
+    expect(stream.stale.value).toBe(false)
+    socket().serverDrop()
+    expect(stream.stale.value).toBe(true)
   })
 
   it('closes the socket and stops reconnecting when disposed', () => {

@@ -10,30 +10,28 @@ const props = defineProps<{
   motion: Motion | null
   rateHz: number
   points: number
-  lastMessageAt: number | null
+  lastFixAt: number | null
+  stale: boolean
 }>()
 const follow = defineModel<boolean>('follow', { required: true })
 const emit = defineEmits<{ fit: []; clear: [] }>()
 
-const STALE_AFTER_MS = 3000
-
-// 每秒更新一次「多久前收到」與逾時判斷
+// 每秒更新一次「多久前收到」
 const now = ref(Date.now())
 const ticker = setInterval(() => (now.value = Date.now()), 1000)
 onBeforeUnmount(() => clearInterval(ticker))
 
-const ageS = computed(() => (props.lastMessageAt === null ? null : Math.max(0, (now.value - props.lastMessageAt) / 1000)))
+const ageS = computed(() => (props.lastFixAt === null ? null : Math.max(0, (now.value - props.lastFixAt) / 1000)))
 
 const link = computed(() => {
   if (props.status === 'connecting') return { label: '連線中…', tone: 'warn' }
   if (props.status === 'closed') return { label: '已斷線，重新連線中', tone: 'bad' }
-  if (ageS.value === null || ageS.value * 1000 > STALE_AFTER_MS) return { label: '已連線・無資料', tone: 'warn' }
+  if (props.stale) return { label: '已連線・無資料', tone: 'warn' }
   return { label: '已連線', tone: 'ok' }
 })
 
-const gpsTime = computed(() =>
-  props.latest ? new Date(props.latest.t).toLocaleTimeString('zh-TW', { hour12: false }) : '—',
-)
+// 海事與軍方通聯慣用 UTC，不用瀏覽器的時區
+const gpsTime = computed(() => (props.latest ? new Date(props.latest.t).toISOString().slice(11, 19) : '—'))
 </script>
 
 <template>
@@ -67,7 +65,7 @@ const gpsTime = computed(() =>
         <dd>{{ motion?.courseDeg != null ? `${motion.courseDeg.toFixed(0).padStart(3, '0')}°` : '—' }}</dd>
       </div>
       <div>
-        <dt>GPS 時間</dt>
+        <dt>GPS 時間 UTC</dt>
         <dd>{{ gpsTime }}</dd>
       </div>
       <div>

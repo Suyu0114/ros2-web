@@ -9,6 +9,7 @@ const props = defineProps<{
   config: AppConfig
   track: readonly GpsFix[]
   course: number | null // 船頭方向（度）；null 時維持上一次的方向
+  stale: boolean // 船位過期：標記變灰，並標示「最後已知位置」
 }>()
 const follow = defineModel<boolean>('follow', { required: true })
 
@@ -25,7 +26,8 @@ let heading = 0
 
 const vesselIcon = L.divIcon({
   className: 'vessel-icon',
-  html: `<svg class="vessel" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+  html: `<span class="lkp">最後已知位置</span>
+         <svg class="vessel" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
            <path d="M16 3 L23 26 L16 21 L9 26 Z" />
          </svg>`,
   iconSize: [32, 32],
@@ -47,6 +49,7 @@ onBeforeUnmount(() => {
 })
 
 watch(() => props.track, render)
+watch(() => props.stale, applyStale)
 watch(follow, (on) => {
   const last = props.track.at(-1)
   if (on && map && last) map.panTo([last.lat, last.lon])
@@ -71,11 +74,18 @@ function render(track: readonly GpsFix[]) {
     return
   }
   vessel.setLatLng([last.lat, last.lon])
-  if (!map.hasLayer(vessel)) vessel.addTo(map)
+  if (!map.hasLayer(vessel)) {
+    vessel.addTo(map)
+    applyStale() // 加回地圖時 Leaflet 會重設 icon 的 class
+  }
   if (props.course !== null) heading = props.course
   const icon = vessel.getElement()?.querySelector<SVGElement>('.vessel')
   if (icon) icon.style.transform = `rotate(${heading}deg)`
   if (follow.value) map.panTo([last.lat, last.lon], { animate: true, duration: 0.25 })
+}
+
+function applyStale() {
+  vessel?.getElement()?.classList.toggle('stale', props.stale)
 }
 
 /** 縮放到整條軌跡，並關閉跟隨 */
@@ -110,5 +120,29 @@ defineExpose({ fitTrack })
   transform-origin: 50% 50%;
   transition: transform 0.2s linear;
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45));
+}
+
+/* 過期的船位：改成灰色，上方標示「最後已知位置」，避免被當成目前位置 */
+.track-map :deep(.vessel-icon.stale .vessel) {
+  fill: #5f6b78;
+}
+
+.track-map :deep(.lkp) {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(29 39 51 / 0.85);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.track-map :deep(.vessel-icon.stale .lkp) {
+  display: block;
 }
 </style>

@@ -8,6 +8,7 @@ export interface GpsStreamOptions {
   WebSocketImpl?: new (url: string) => WebSocket // 測試時注入假的 WebSocket
   initialRetryMs?: number
   maxRetryMs?: number
+  staleAfterMs?: number // 超過這麼久沒收到 fix，目前位置視為過期
 }
 
 const RATE_WINDOW_MS = 5000
@@ -23,6 +24,8 @@ export function defaultStreamUrl(location: Pick<Location, 'protocol' | 'host'> =
  * - 重連後的 snapshot：同一個 backend session 就用它補上斷線期間的點；backend 重啟過
  *   （session 不同、歷史已清空）則保留畫面上已有的航跡，再接上新的資料。
  * - track 每次都換成新的陣列（不就地修改），元件可以直接 watch。
+ * - stale：斷線中，或太久沒收到即時 fix。畫面上的船位只是「最後已知位置」，不能當成目前位置。
+ *   snapshot 是歷史，不算收到新資料。
  */
 export function useGpsStream(options: GpsStreamOptions = {}) {
   const {
@@ -31,13 +34,18 @@ export function useGpsStream(options: GpsStreamOptions = {}) {
     WebSocketImpl = WebSocket,
     initialRetryMs = 1000,
     maxRetryMs = 10_000,
+    staleAfterMs = 3000,
   } = options
 
   const status = ref<ConnectionStatus>('connecting')
   const track = shallowRef<readonly GpsFix[]>([])
   const latest = computed(() => track.value.at(-1) ?? null)
-  const lastMessageAt = ref<number | null>(null)
+  const lastFixAt = ref<number | null>(null)
   const rateHz = ref(0)
+  const clock = ref(Date.now()) // 每秒更新，讓 stale 在資料停了之後也會變
+  const stale = computed(
+    () => status.value !== 'open' || lastFixAt.value === null || clock.value - lastFixAt.value > staleAfterMs,
+  )
 
   let socket: WebSocket | null = null
   let retryMs = initialRetryMs
@@ -68,8 +76,6 @@ export function useGpsStream(options: GpsStreamOptions = {}) {
   }
 
   function handleMessage(message: ServerMessage) {
-    const now = Date.now()
-    lastMessageAt.value = now
     if (message.type === 'snapshot') {
       const { points } = message
       const sameSession = message.session === session
@@ -86,8 +92,10 @@ export function useGpsStream(options: GpsStreamOptions = {}) {
     if (fix.seq <= lastSeq) return // 重複或過期
     lastSeq = fix.seq
     track.value = capped([...track.value, fix])
-    arrivals.push(now)
-    updateRate(now)
+    const arrivedAt = Date.now()
+    lastFixAt.value = arrivedAt
+    arrivals.push(arrivedAt)
+    updateRate(arrivedAt)
   }
 
   // 超過上限時一次修掉 10%，地圖才不必每一筆都整條重畫
@@ -97,25 +105,31 @@ export function useGpsStream(options: GpsStreamOptions = {}) {
 
   function updateRate(now = Date.now()) {
     while (arrivals.length > 0 && now - arrivals[0]! > RATE_WINDOW_MS) arrivals.shift()
-    const span = arrivals.length >= 2 ? arrivals.at(-1)! - arrivals[0]! : 0
-    rateHz.value = span > 0 ? ((arrivals.length - 1) * 1000) / span : 0
+    const last = arrivals.at(-1)
+    const span = arrivals.length >= 2 ? last! - arrivals[0]! : 0
+    // 過期（同 stale 的門檻）就是 0，不要等舊的點移出視窗，否則會出現「無資料・5 Hz」
+    rateHz.value = span > 0 && now - last! <= staleAfterMs ? ((arrivals.length - 1) * 1000) / span : 0
   }
 
   function clearTrack() {
     track.value = []
   }
 
-  const rateTimer = setInterval(updateRate, 1000) // 資料停了也要讓頻率歸零
+  // 資料停了也要讓頻率歸零、讓 stale 成立
+  const tickTimer = setInterval(() => {
+    clock.value = Date.now()
+    updateRate(clock.value)
+  }, 1000)
   connect()
 
   onScopeDispose(() => {
     disposed = true
     clearTimeout(retryTimer)
-    clearInterval(rateTimer)
+    clearInterval(tickTimer)
     const ws = socket
     socket = null
     ws?.close()
   })
 
-  return { status, track, latest, lastMessageAt, rateHz, clearTrack }
+  return { status, track, latest, lastFixAt, stale, rateHz, clearTrack }
 }
